@@ -1,21 +1,31 @@
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.generic import ListView
 from .models import Post
 # Create your views here.
 
-def hello_world(request):
-    return HttpResponse("hello world")
+class PostListView(ListView):
+    queryset =  posts_list = Post.objects.all().filter(status=Post.Status.PUBLISHED)
+    context_object_name = 'posts'
+    paginate_by = 3
+    template_name = "blog/post/list.html"
+
 
 def posts_list(request):
-    posts_list = Post.objects.all().filter()
+    posts_list = Post.objects.all().filter(status=Post.Status.PUBLISHED)
 
     paginator = Paginator(posts_list,3)
     page_num = request.GET.get('page',1)
-    posts = paginator.page(page_num)
+    try:
+        posts = paginator.page(page_num)
+    except PageNotAnInteger:
+        posts = paginator.page(1)
+    except EmptyPage:
+        posts = paginator.page(paginator.page_num)
     return render(request,'blog/post/list.html',{'posts':posts})
 
 def post_detail(request,year,month,day,post):
-    post = get_object_or_404(Post, publish__year=year, publish__month=month, publish__day=day, slug=post)
+    post = get_object_or_404(Post,status=Post.Status.PUBLISHED, publish__year=year, publish__month=month, publish__day=day, slug=post)
 
     return render(request,'blog/post/detail.html',{'post': post})
